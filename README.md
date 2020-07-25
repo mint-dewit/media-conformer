@@ -1,6 +1,10 @@
 # media-conformer
 
-This project aims to make ffmpeg transcoding a drag and drop operation accessible by anyone, using presets built by with expert knowledge. The following goals outline the project:
+This project aims to make ffmpeg transcoding a drag and drop operation accessible by anyone, using presets built by with expert knowledge.
+
+![Media Conformer](https://raw.githubusercontent.com/baltedewit/media-conformer/master/images/media-conformer.png)
+
+The following goals outline the project:
 
 - Drag and drop interface
 - Portable preset files
