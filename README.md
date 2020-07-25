@@ -51,7 +51,7 @@ yarn lint
 
 ### Example file
 
-```json
+```jsonc
 {
 	// Name of the preset to be shown in the settings:
 	"name": "Example Config",
