@@ -26,7 +26,7 @@ export class Renderer extends EventEmitter {
 		const progressReportRegex = /(frame=\s*)(\d+)(\s*fps=\s*)(\d+(.\d+)?)(\s*q=)(-?(\d+.?)+)(\s*(L)?size=\s*)(\d+(kB|mB|b))(\s*time=\s*)(\d{2}:\d{2}:\d{2}.\d{2})(\s*bitrate=\s*)(\d+(.\d+)?(\w+(\/s)?)(\s*speed=)(\d+.\d+x))/g
 		const timeRegex = /(\d{2}):(\d{2}):(\d{2}.\d{2})/
 
-		let renderProcess: ChildProcess = spawn(
+		const renderProcess: ChildProcess = spawn(
 			(this.config.paths && this.config.paths.ffmpeg) || process.platform === 'win32'
 				? 'ffmpeg.exe'
 				: 'ffmpeg',
@@ -37,7 +37,7 @@ export class Renderer extends EventEmitter {
 		const fileDuration = step.analysis.info.format && step.analysis.info.format.duration
 		if (fileDuration) {
 			renderProcess.stderr.on('data', (data: any) => {
-				let stringData = data.toString()
+				const stringData = data.toString()
 				// console.log(stringData)
 				let res: RegExpExecArray | null
 				while ((res = progressReportRegex.exec(stringData)) !== null) {
@@ -71,7 +71,7 @@ export class Renderer extends EventEmitter {
 	}
 
 	private _getProcessArgs(step: RenderWorkstep) {
-		const args = ['-y', '-i', step.input]
+		const args = ['-y', '-i', `"${step.input}"`]
 
 		if (step.encoderConfig.videoEncoder) {
 			const videoConfig = step.encoderConfig.videoEncoder
@@ -191,7 +191,7 @@ export class Renderer extends EventEmitter {
 			args.push('-flags', '+ildct+ilme')
 		}
 
-		args.push(step.output)
+		args.push(`"${step.output}"`)
 
 		return args
 	}
