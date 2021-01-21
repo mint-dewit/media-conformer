@@ -127,13 +127,15 @@ export class Renderer extends EventEmitter {
 					// set fieldorder (this will correctly set tff/bff)
 					videoFilter.push(`fieldorder=${f.interlaced}`)
 				} else if (f.frameRate) {
-					videoFilter.push(`${videoFilter && ','}fps=${f.frameRate || '25'}`)
+					videoFilter.push(`fps=${f.frameRate || '25'}`)
 				}
-				if (f.colorspace) {
-					videoFilter.push(`${videoFilter && ','}colorspace=${f.colorspace}`)
-				} else if (f.height) {
-					const cSpace = f.height >= 720 ? 'bt601-6-625' : 'bt709'
-					videoFilter.push(`${videoFilter && ','}colorspace=${cSpace}`)
+				// note that input needs a color space to be set for use to do useful things
+				const hasInpColorSpace = step.analysis.info.colorSpace
+				if (hasInpColorSpace && f.colorspace) {
+					videoFilter.push(`colorspace=${f.colorspace}`)
+				} else if (hasInpColorSpace && f.height) {
+					const cSpace = f.height <= 576 ? 'bt601-6-625' : 'bt709'
+					videoFilter.push(`colorspace=${cSpace}`)
 				}
 			}
 

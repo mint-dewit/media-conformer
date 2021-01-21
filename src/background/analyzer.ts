@@ -51,6 +51,9 @@ export class Analyzer extends EventEmitter {
 			anomalies: {}
 		}
 
+		const { color_space } = (info.streams || []).find((s) => s.color_space) || {}
+		analysis.info.colorSpace = color_space
+
 		if (this.config.interlaced) {
 			analysis.info.field_order = await this.analyzeInterlacing(step)
 

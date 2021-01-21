@@ -21,6 +21,7 @@ export interface MediaStream {
 	display_aspect_ratio?: string
 	pix_fmt?: string
 	bits_per_raw_sample?: string
+	color_space?: string
 
 	// audio
 	sample_fmt?: string
@@ -77,6 +78,7 @@ export interface MediaInfo {
 	format?: MediaFormat
 	timebase?: number
 	loudness?: LoudnessInfo
+	colorSpace?: string
 }
 
 export interface Analysis {
