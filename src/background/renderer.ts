@@ -81,13 +81,20 @@ export class Renderer extends EventEmitter {
 			if (videoConfig.encoderOptions) args.push(...videoConfig.encoderOptions)
 			else args.push('-crf', '18')
 
-			let videoFilter: Array<string> = []
+			const videoFilter: Array<string> = []
 			const inputFieldOrder = step.analysis.info.field_order
 
 			if (step.encoderConfig.format) {
 				const f = step.encoderConfig.format
 				if (f.width || f.height) {
-					videoFilter.push(`scale=w=${f.width || '-1'}:h=${f.height || -1}`)
+					videoFilter.push(
+						`scale=w=${f.width || '-1'}:h=${f.height || -1}:interl=${
+							inputFieldOrder !== FieldOrder.Progressive ? 1 : 0
+						}:${f.width && f.height ? 'force_original_aspect_ratio=decrease' : ''}`
+					)
+					if (f.width && f.height && f.width > 0 && f.height > 0) {
+						videoFilter.push(`pad=${f.width || '-1'}:${f.height}:-1:-1`)
+					}
 				}
 				if (inputFieldOrder !== FieldOrder.Progressive && f.interlaced === undefined) {
 					// input is interlaced, output is progressive
