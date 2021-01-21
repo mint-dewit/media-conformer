@@ -60,6 +60,8 @@ export class Analyzer extends EventEmitter {
 			step.completed()
 		}
 
+		const { width, height } = (info.streams || []).find((s) => s.width) || {}
+
 		if (
 			this.config.blackFrames ||
 			this.config.freezeFrames ||
@@ -68,7 +70,9 @@ export class Analyzer extends EventEmitter {
 		) {
 			analysis.anomalies = await this.analyzeAnomalies(
 				step,
-				Number(analysis.info.format!.duration || 0)
+				Number(analysis.info.format!.duration || 0),
+				width,
+				height
 			)
 
 			step.completed()
@@ -122,7 +126,7 @@ export class Analyzer extends EventEmitter {
 		this.logger.info(`Worker: metadata generate: generated metadata for "${step.input}"`)
 		this.logger.debug(`Worker: metadata generate: generated metadata details`, probeData)
 
-		let newInfo = literal<MediaInfo>({
+		const newInfo = literal<MediaInfo>({
 			name: step.input,
 
 			streams: probeData.streams.map((s: any) => ({
@@ -229,7 +233,12 @@ export class Analyzer extends EventEmitter {
 		return fieldOrder
 	}
 
-	analyzeAnomalies(step: WorkStep, duration: number): Promise<Anomalies> {
+	analyzeAnomalies(
+		step: WorkStep,
+		duration: number,
+		expectedWidth?: number,
+		expectedHeight?: number
+	): Promise<Anomalies> {
 		const blackDetectRegex = /(black_start:)(\d+(.\d+)?)( black_end:)(\d+(.\d+)?)( black_duration:)(\d+(.\d+))?/g
 		const freezeDetectStart = /(lavfi\.freezedetect\.freeze_start: )(\d+(.\d+)?)/g
 		const freezeDetectDuration = /(lavfi\.freezedetect\.freeze_duration: )(\d+(.\d+)?)/g
@@ -252,7 +261,7 @@ export class Analyzer extends EventEmitter {
 				`pix_th=${this.config.blackFrames.blackThreshold || 0.1}`
 		}
 
-		if (this.config.borders) {
+		if (this.config.borders && expectedHeight && expectedWidth) {
 			if (vFilterString) {
 				vFilterString += ','
 			}
@@ -289,7 +298,9 @@ export class Analyzer extends EventEmitter {
 			'-'
 		]
 
-		let infoProcess: ChildProcess = spawn(
+		console.log(args)
+
+		const infoProcess: ChildProcess = spawn(
 			(this.config.paths && this.config.paths.ffmpeg) || process.platform === 'win32'
 				? 'ffmpeg.exe'
 				: 'ffmpeg',
@@ -299,9 +310,9 @@ export class Analyzer extends EventEmitter {
 
 		let curCrop: Anomaly | undefined = undefined
 		infoProcess.stderr.on('data', (data: any) => {
-			let stringData = data.toString()
+			const stringData = data.toString()
 			if (typeof stringData !== 'string') return
-			let frameMatch = stringData.match(/^frame= +\d+/)
+			const frameMatch = stringData.match(/^frame= +\d+/)
 			if (frameMatch) {
 				// currentFrame = Number(frameMatch[0].replace('frame=', ''))
 				return
@@ -341,8 +352,8 @@ export class Analyzer extends EventEmitter {
 
 			while ((res = cropDetectReport.exec(stringData)) !== null) {
 				// just a quick hardcoded thing
-				const w = 1920
-				const h = 1080
+				const w = expectedWidth || 1920
+				const h = expectedHeight || 1080
 
 				if (Number(res[10]) !== w || Number(res[12]) !== h) {
 					const t = Number(res[21])
