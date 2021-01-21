@@ -4,7 +4,7 @@ import { Analysis } from '@/types/mediaInfo'
 
 export class WorkStep extends EventEmitter {
 	input: string
-	failed: boolean = false
+	failed = false
 	warnings: Array<string> = []
 
 	progressSteps = 0

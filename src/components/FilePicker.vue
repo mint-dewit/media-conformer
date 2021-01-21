@@ -11,7 +11,14 @@
 			<h3>Drag and drop files to start</h3>
 			<p>Or use the button:</p>
 			<label class="button-label">
-				<input class="button" type="file" @input="onChange" ref="picker" multiple accept="video/*" />
+				<input
+					class="button"
+					type="file"
+					@input="onChange"
+					ref="picker"
+					multiple
+					accept="video/*"
+				/>
 				<span class="pseudobutton"></span>
 			</label>
 		</div>
