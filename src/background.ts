@@ -1,7 +1,8 @@
 'use strict'
 
 import { app, protocol, BrowserWindow } from 'electron'
-import { createProtocol, installVueDevtools } from 'vue-cli-plugin-electron-builder/lib'
+import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
+import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 import { API } from './background/api'
@@ -67,7 +68,7 @@ app.on('ready', async () => {
 	if (isDevelopment && !process.env.IS_TEST) {
 		// Install Vue Devtools
 		try {
-			await installVueDevtools()
+			await installExtension(VUEJS_DEVTOOLS)
 		} catch (e) {
 			console.error('Vue Devtools failed to install:', e.toString())
 		}
