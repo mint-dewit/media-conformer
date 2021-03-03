@@ -84,6 +84,12 @@ yarn lint
 				// having a format defined implies a reencode will be done
 				"width": 1024
 			}
+		},
+		{
+			"postFix": "_NO-AUDIO",
+			"discard": {
+				"audio": true
+			}
 		}
 	]
 }
@@ -134,6 +140,13 @@ export interface EncoderConfig {
 	postFix: string
 	/** extension of the new file (e.g. .mp4) */
 	extension?: string
+	/** discard streams */
+	discard?: {
+		video?: boolean
+		audio?: boolean
+		subtitle?: boolean
+		data?: boolean
+	}
 	/** Configures loudnorm filter */
 	loudness?: {
 		integrated?: number
