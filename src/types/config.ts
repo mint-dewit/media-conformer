@@ -10,6 +10,13 @@ export interface EncoderConfig {
 	postFix: string
 	/** extension of the new file (e.g. .mp4) */
 	extension?: string
+	/** discard streams */
+	discard?: {
+		video?: boolean
+		audio?: boolean
+		subtitle?: boolean
+		data?: boolean
+	}
 	/** Configures loudnorm filter */
 	loudness?: {
 		integrated?: number
