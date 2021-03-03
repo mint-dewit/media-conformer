@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { EncoderConfig } from '@/types/config'
 import { Analysis } from '@/types/mediaInfo'
+import { ParsedPath } from 'path'
 
 export class WorkStep extends EventEmitter {
 	input: string
@@ -40,13 +41,21 @@ export class WorkStep extends EventEmitter {
 
 export class RenderWorkstep extends WorkStep {
 	output: string
+	outputParse: ParsedPath
 	encoderConfig: EncoderConfig
 	analysis: Analysis
 
-	constructor(input: string, output: string, config: EncoderConfig, analysis: Analysis) {
+	constructor(
+		input: string,
+		output: string,
+		outputParse: ParsedPath,
+		config: EncoderConfig,
+		analysis: Analysis
+	) {
 		super(input)
 		this.input = input
 		this.output = output
+		this.outputParse = outputParse
 		this.encoderConfig = config
 		this.analysis = analysis
 	}

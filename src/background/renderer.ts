@@ -74,8 +74,35 @@ export class Renderer extends EventEmitter {
 		const args = ['-y', '-i', `"${step.input}"`]
 
 		if (step.encoderConfig.custom) {
-			args.push(step.encoderConfig.custom)
-			args.push(`"${step.output}"`)
+			let stringHasMatchData: boolean = false
+			// data available for use in handlebars
+			const customEncoderMatchData: { [key: string]: string } = {
+				...step.outputParse,
+				postFix: step.encoderConfig.postFix,
+				extension: step.encoderConfig.extension
+					? step.encoderConfig.extension
+					: step.outputParse.ext,
+				date: new Date().toISOString().slice(0, 10)
+			}
+			// replace handlebars with data
+			const customEncoderString = step.encoderConfig.custom.replace(
+				/\{\{([^}]+)\}\}/g,
+				(match: string) => {
+					match = match.slice(2, -2)
+					if (!customEncoderMatchData[match]) return '{{' + match + '}}'
+					stringHasMatchData = true
+					return customEncoderMatchData[match]
+				}
+			)
+
+			if (stringHasMatchData) {
+				// handlebars are used. do not append the output file name
+				args.push(customEncoderString)
+			} else {
+				// handlebars are not used. append the output file name
+				args.push(step.encoderConfig.custom)
+				args.push(`"${step.output}"`)
+			}
 			return args
 		}
 
