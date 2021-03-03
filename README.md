@@ -178,3 +178,43 @@ export interface EncoderConfig {
 	}
 }
 ```
+
+#### Custom encoder
+
+The custom encoder enables the use of complex ffmpeg encoding/filter settings. It is assumed you know how to use ffmpeg when using the custom encoder.
+
+It takes in a string of ffmpeg args and the output file path, name and extension are automatically appended.
+
+```json
+"encoders": [
+	{
+		"postFix": "_custom-text-overlay",
+		"extension": ".mp4",
+		"custom": "-vf drawtext=\"fontfile=/Windows/Fonts/arial.ttf: text='Custom text overlay': fontcolor=white: fontsize=120: box=1: boxcolor=black: boxborderw=20: x=(w-text_w)/2: y=(h-text_h)/1.4\""
+	}
+]
+```
+
+The custom encoder supports handlebar style string replacement for customising file names. If any handlebars are detected the output filename will not be automatically appended. You will need to handle the output file yourself (e.g. `{{dir}}/{{name}}{{postFix}}_Custom-format{{extension}}`).
+
+```json
+"encoders": [
+	{
+		"postFix": "_Complex-Filter",
+		"custom": "-an -filter_complex \"[0]pad=iw*2:ih[int];[int][0]overlay=W/2:0[doublewidth];[doublewidth]scale=iw/2:ih/2[scaled];[scaled]split=3[s1][s2][s3];[s1]crop=iw/3:ih:0:0[one];[s2]crop=iw/3:ih:ow:0[two];[s3]crop=iw/3:ih:ow*2:0[three]\" -map \"[one]\" -q:v 1 -sws_flags bicubic \"{{dir}}/{{name}}{{postFix}}_{{date}}_one{{ext}}\" -map \"[two]\" -q:v 1 -sws_flags bicubic \"{{dir}}/{{name}}{{postFix}}_{{date}}_two{{ext}}\" -map \"[three]\" -q:v 1 -sws_flags bicubic \"{{dir}}/{{name}}{{postFix}}_{{date}}_three{{ext}}\""
+	}
+]
+```
+
+Available to use:
+
+```ts
+postFix     // EncoderConfig postfix
+extension?  // EncoderConfig extension
+root        // Input file root name
+dir         // Input file directory
+base        // Input file name with original extension
+ext         // Input file extension
+name        // Input file name
+date        // Date in ISO format (YYYY-MM-DD)
+```
