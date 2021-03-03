@@ -73,6 +73,12 @@ export class Renderer extends EventEmitter {
 	private _getProcessArgs(step: RenderWorkstep) {
 		const args = ['-y', '-i', `"${step.input}"`]
 
+		if (step.encoderConfig.custom) {
+			args.push(step.encoderConfig.custom)
+			args.push(`"${step.output}"`)
+			return args
+		}
+
 		const discard = step.encoderConfig.discard || {}
 
 		if (discard.video) {
