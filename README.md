@@ -140,6 +140,8 @@ export interface EncoderConfig {
 	postFix: string
 	/** extension of the new file (e.g. .mp4) */
 	extension?: string
+	/** custom options. Ignores all other options */
+	custom?: string
 	/** discard streams */
 	discard?: {
 		video?: boolean
