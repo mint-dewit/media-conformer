@@ -169,7 +169,7 @@ export class Renderer extends EventEmitter {
 						`measured_i=${loudness.integrated}:` +
 						`measured_lra=${loudness.LRA}:` +
 						`measured_tp=${loudness.truePeak}:` +
-						`measured_thresh=${loudness.truePeak}:`
+						`measured_thresh=${loudness.threshold}:`
 				}
 				const lConfig = step.encoderConfig.loudness
 				audioFilter += `loudnorm=${measured}i=${lConfig.integrated || -23}:lra=${lConfig.LRA ||
