@@ -104,6 +104,8 @@ export default class Analysis extends Vue {
 	right: 10vw;
 
 	text-align: left;
+
+	overflow: auto; /* TODO - not the prettiest thing */
 }
 
 .list {

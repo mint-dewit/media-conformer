@@ -49,6 +49,8 @@ progress {
 	vertical-align: 0.03rem;
 	-webkit-appearance: none;
 	background-color: white;
+
+	overflow: auto; /* TODO - not the prettiest thing */
 }
 progress::-webkit-progress-bar {
 	background: #c4c4c4;
