@@ -56,7 +56,8 @@ export class API {
 					})
 				)
 
-				await Promise.all(workers.map((w) => this.renderer!.renderFile(w)))
+				// TODO - handle these errors better
+				await Promise.all(workers.map((w) => this.renderer!.renderFile(w).catch(() => null)))
 
 				ev.reply('rendered', { path: file, outputs: workers.map((w) => w.output) })
 			}
