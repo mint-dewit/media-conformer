@@ -93,9 +93,9 @@ export class API {
 
 	private _createRenderSteps(file: string, analysis: Analysis) {
 		return this.config!.encoders.map((encoderConfig) => {
-			const p = path.parse(file)
+			const p: path.ParsedPath = path.parse(file)
 			const output = `${p.dir}/${p.name}${encoderConfig.postFix}${encoderConfig.extension || p.ext}`
-			return new RenderWorkstep(file, output, encoderConfig, analysis)
+			return new RenderWorkstep(file, output, p, encoderConfig, analysis)
 		})
 	}
 }

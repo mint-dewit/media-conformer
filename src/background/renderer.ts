@@ -73,118 +73,169 @@ export class Renderer extends EventEmitter {
 	private _getProcessArgs(step: RenderWorkstep) {
 		const args = ['-y', '-i', `"${step.input}"`]
 
-		if (step.encoderConfig.videoEncoder) {
-			const videoConfig = step.encoderConfig.videoEncoder
-
-			args.push('-codec:v', videoConfig.encoder || 'libx264')
-
-			if (videoConfig.encoderOptions) args.push(...videoConfig.encoderOptions)
-			else args.push('-crf', '18')
-
-			const videoFilter: Array<string> = []
-			const inputFieldOrder = step.analysis.info.field_order
-
-			if (step.encoderConfig.format) {
-				const f = step.encoderConfig.format
-				if (f.width || f.height) {
-					videoFilter.push(
-						`scale=w=${f.width || '-1'}:h=${f.height || -1}:interl=${
-							inputFieldOrder !== FieldOrder.Progressive ? 1 : 0
-						}:${f.width && f.height ? 'force_original_aspect_ratio=decrease' : ''}`
-					)
-					if (f.width && f.height && f.width > 0 && f.height > 0) {
-						videoFilter.push(`pad=${f.width || '-1'}:${f.height}:-1:-1`)
-					}
-				}
-				if (inputFieldOrder !== FieldOrder.Progressive && f.interlaced === undefined) {
-					// input is interlaced, output is progressive
-
-					// export 1 frame per frame or 1 frame per field:
-					const mode = (f.frameRate || 25) >= 50 ? 1 : 0
-					// if we know fieldorder instruct filter, otherwise autodetect:
-					const parity =
-						inputFieldOrder === FieldOrder.BFF ? 1 : inputFieldOrder === FieldOrder.TFF ? 0 : -1
-					// if we know fieldorder always deinterlace, otherwise autodetect:
-					const deint = inputFieldOrder && inputFieldOrder !== FieldOrder.Unknown ? 0 : -1
-
-					videoFilter.push(`bwdif=mode=${mode}:parity=${parity}:deint=${deint}`)
-				}
-				if (f.interlaced) {
-					// output is interlaced
-					if (inputFieldOrder) {
-						// input has metadata
-						if (inputFieldOrder !== (f.interlaced as unknown)) {
-							// input !== output
-							if (inputFieldOrder === FieldOrder.Progressive) {
-								// input is progressive
-								const modes: { [key: string]: string } = {
-									[FieldOrder.TFF]: 'interleave_top',
-									[FieldOrder.BFF]: 'interleave_bottom'
-								}
-								const mode = modes[f.interlaced] as string
-
-								videoFilter.push('fps=' + (f.frameRate || 25) * 2) // make sure input has appropriate amount of frames
-								videoFilter.push('tinterlace=mode=' + mode)
-							}
-						}
-					} else {
-						// TODO - is there a ffmpeg filter that can interlace based on decoder field metadata?
-					}
-
-					// set fieldorder (this will correctly set tff/bff)
-					videoFilter.push(`fieldorder=${f.interlaced}`)
-				} else if (f.frameRate) {
-					videoFilter.push(`fps=${f.frameRate || '25'}`)
-				}
-				// note that input needs a color space to be set for use to do useful things
-				const hasInpColorSpace = step.analysis.info.colorSpace
-				if (hasInpColorSpace && f.colorspace) {
-					videoFilter.push(`colorspace=${f.colorspace}`)
-				} else if (hasInpColorSpace && f.height) {
-					const cSpace = f.height <= 576 ? 'bt601-6-625' : 'bt709'
-					videoFilter.push(`colorspace=${cSpace}`)
-				}
+		if (step.encoderConfig.custom) {
+			let stringHasMatchData: boolean = false
+			// data available for use in handlebars
+			const customEncoderMatchData: { [key: string]: string } = {
+				...step.outputParse,
+				postFix: step.encoderConfig.postFix,
+				extension: step.encoderConfig.extension
+					? step.encoderConfig.extension
+					: step.outputParse.ext,
+				date: new Date().toISOString().slice(0, 10)
 			}
+			// replace handlebars with data
+			const customEncoderString = step.encoderConfig.custom.replace(
+				/\{\{([^}]+)\}\}/g,
+				(match: string) => {
+					match = match.slice(2, -2)
+					if (!customEncoderMatchData[match]) return '{{' + match + '}}'
+					stringHasMatchData = true
+					return customEncoderMatchData[match]
+				}
+			)
 
-			if (videoFilter.length) args.push('-filter:v', videoFilter.join(','))
-		} else {
-			args.push('-codec:v', 'copy')
+			if (stringHasMatchData) {
+				// handlebars are used. do not append the output file name
+				args.push(customEncoderString)
+			} else {
+				// handlebars are not used. append the output file name
+				args.push(step.encoderConfig.custom)
+				args.push(`"${step.output}"`)
+			}
+			return args
 		}
 
-		if (step.encoderConfig.audioEncoder) {
-			const audioConfig = step.encoderConfig.audioEncoder
+		const discard = step.encoderConfig.discard || {}
 
-			args.push('-codec:a', audioConfig.encoder || 'aac')
-
-			if (audioConfig.encoderOptions) args.push(...audioConfig.encoderOptions)
-
-			let audioFilter = ''
-
-			if (step.encoderConfig.loudness) {
-				let measured = ''
-				if (step.analysis.info.loudness) {
-					// pass in measure values
-					const loudness = step.analysis.info.loudness
-					measured =
-						`measured_i=${loudness.integrated}:` +
-						`measured_lra=${loudness.LRA}:` +
-						`measured_tp=${loudness.truePeak}:` +
-						`measured_thresh=${loudness.threshold}:`
-				}
-				const lConfig = step.encoderConfig.loudness
-				audioFilter += `loudnorm=${measured}i=${lConfig.integrated || -23}:lra=${lConfig.LRA ||
-					13}:tp=${lConfig.truePeak || -1}:dual_mono=${lConfig.dualMono || 'false'}`
-			}
-
-			if (audioFilter) args.push('-filter:a', audioFilter)
-
-			if (step.encoderConfig.format && step.encoderConfig.format.audioRate) {
-				args.push('-ar', step.encoderConfig.format.audioRate)
-			} else if (step.encoderConfig.loudness) {
-				args.push('-ar', '48k')
-			}
+		if (discard.video) {
+			args.push('-vn')
 		} else {
-			args.push('-codec:a', 'copy')
+			if (step.encoderConfig.videoEncoder) {
+				const videoConfig = step.encoderConfig.videoEncoder
+
+				args.push('-codec:v', videoConfig.encoder || 'libx264')
+
+				if (videoConfig.encoderOptions) args.push(...videoConfig.encoderOptions)
+				else args.push('-crf', '18')
+
+				const videoFilter: Array<string> = []
+				const inputFieldOrder = step.analysis.info.field_order
+
+				if (step.encoderConfig.format) {
+					const f = step.encoderConfig.format
+					if (f.width || f.height) {
+						videoFilter.push(
+							`scale=w=${f.width || '-1'}:h=${f.height || -1}:interl=${
+								inputFieldOrder !== FieldOrder.Progressive ? 1 : 0
+							}:${f.width && f.height ? 'force_original_aspect_ratio=decrease' : ''}`
+						)
+						if (f.width && f.height && f.width > 0 && f.height > 0) {
+							videoFilter.push(`pad=${f.width || '-1'}:${f.height}:-1:-1`)
+						}
+					}
+					if (inputFieldOrder !== FieldOrder.Progressive && f.interlaced === undefined) {
+						// input is interlaced, output is progressive
+
+						// export 1 frame per frame or 1 frame per field:
+						const mode = (f.frameRate || 25) >= 50 ? 1 : 0
+						// if we know fieldorder instruct filter, otherwise autodetect:
+						const parity =
+							inputFieldOrder === FieldOrder.BFF ? 1 : inputFieldOrder === FieldOrder.TFF ? 0 : -1
+						// if we know fieldorder always deinterlace, otherwise autodetect:
+						const deint = inputFieldOrder && inputFieldOrder !== FieldOrder.Unknown ? 0 : -1
+
+						videoFilter.push(`bwdif=mode=${mode}:parity=${parity}:deint=${deint}`)
+					}
+					if (f.interlaced) {
+						// output is interlaced
+						if (inputFieldOrder) {
+							// input has metadata
+							if (inputFieldOrder !== (f.interlaced as unknown)) {
+								// input !== output
+								if (inputFieldOrder === FieldOrder.Progressive) {
+									// input is progressive
+									const modes: { [key: string]: string } = {
+										[FieldOrder.TFF]: 'interleave_top',
+										[FieldOrder.BFF]: 'interleave_bottom'
+									}
+									const mode = modes[f.interlaced] as string
+
+									videoFilter.push('fps=' + (f.frameRate || 25) * 2) // make sure input has appropriate amount of frames
+									videoFilter.push('tinterlace=mode=' + mode)
+								}
+							}
+						} else {
+							// TODO - is there a ffmpeg filter that can interlace based on decoder field metadata?
+						}
+
+						// set fieldorder (this will correctly set tff/bff)
+						videoFilter.push(`fieldorder=${f.interlaced}`)
+					} else if (f.frameRate) {
+						videoFilter.push(`fps=${f.frameRate || '25'}`)
+					}
+					// note that input needs a color space to be set for use to do useful things
+					const hasInpColorSpace = step.analysis.info.colorSpace
+					if (hasInpColorSpace && f.colorspace) {
+						videoFilter.push(`colorspace=${f.colorspace}`)
+					} else if (hasInpColorSpace && f.height) {
+						const cSpace = f.height <= 576 ? 'bt601-6-625' : 'bt709'
+						videoFilter.push(`colorspace=${cSpace}`)
+					}
+				}
+
+				if (videoFilter.length) args.push('-filter:v', videoFilter.join(','))
+			} else {
+				args.push('-codec:v', 'copy')
+			}
+		}
+
+		if (discard.audio) {
+			args.push('-an')
+		} else {
+			if (step.encoderConfig.audioEncoder) {
+				const audioConfig = step.encoderConfig.audioEncoder
+
+				args.push('-codec:a', audioConfig.encoder || 'aac')
+
+				if (audioConfig.encoderOptions) args.push(...audioConfig.encoderOptions)
+
+				let audioFilter = ''
+
+				if (step.encoderConfig.loudness) {
+					let measured = ''
+					if (step.analysis.info.loudness) {
+						// pass in measure values
+						const loudness = step.analysis.info.loudness
+						measured =
+							`measured_i=${loudness.integrated}:` +
+							`measured_lra=${loudness.LRA}:` +
+							`measured_tp=${loudness.truePeak}:` +
+							`measured_thresh=${loudness.threshold}:`
+					}
+					const lConfig = step.encoderConfig.loudness
+					audioFilter += `loudnorm=${measured}i=${lConfig.integrated || -23}:lra=${lConfig.LRA ||
+						13}:tp=${lConfig.truePeak || -1}:dual_mono=${lConfig.dualMono || 'false'}`
+				}
+
+				if (audioFilter) args.push('-filter:a', audioFilter)
+
+				if (step.encoderConfig.format && step.encoderConfig.format.audioRate) {
+					args.push('-ar', step.encoderConfig.format.audioRate)
+				} else if (step.encoderConfig.loudness) {
+					args.push('-ar', '48k')
+				}
+			} else {
+				args.push('-codec:a', 'copy')
+			}
+		}
+
+		if (discard.subtitle) {
+			args.push('-sn')
+		}
+
+		if (discard.data) {
+			args.push('-dn')
 		}
 
 		if (step.encoderConfig.format && step.encoderConfig.format.format) {
@@ -193,6 +244,7 @@ export class Renderer extends EventEmitter {
 
 		// pass the interlacing flags
 		if (
+			!discard.video &&
 			step.encoderConfig.videoEncoder &&
 			step.encoderConfig.format &&
 			step.encoderConfig.format.interlaced
