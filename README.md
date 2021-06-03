@@ -218,3 +218,6 @@ ext         // Input file extension
 name        // Input file name
 date        // Date in ISO format (YYYY-MM-DD)
 ```
+
+# Contributors:
+	- JonFranklin301
